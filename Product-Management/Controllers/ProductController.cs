@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Product_Management.Data;
 using Product_Management.Models;
-using Product_Management.Repositories;
+using Product_Management.Services;
+using Product_Management.Services.Contracts;
 
 namespace Product_Management.Controllers
 {
@@ -9,20 +10,20 @@ namespace Product_Management.Controllers
     [Route("api/[Controller]")]
     public class ProductController:Controller
     {
-        private ApplicationDbContext _dbContext;
-        private IProductsRepository _repo;
-        public ProductController(ApplicationDbContext dbContext, IProductsRepository repo)
+        private readonly ApplicationDbContext _dbContext; // should be readonly as well (all the class firlds)
+        private readonly IProductService _service;
+        public ProductController(ApplicationDbContext dbContext, IProductService service)
         {
             _dbContext = dbContext;
-            _repo = repo;
+            _service = service;
         }
 
-        [HttpGet("/SearchProducts")]
-        public async Task<ActionResult> searchProducts([FromHeader] int StoreID, [FromHeader] string query)
+        [HttpGet("/SearchProducts")] //search-products (kebab casing)
+        public ActionResult SearchProducts([FromHeader] int storeId, [FromHeader] string query)  //should be Pascal cased and not camel cased
         {
             try
             {
-                var res=await _repo.SearchProducts(StoreID, query);
+                var res= _service.SearchProducts(storeId, query); // params should be small cased 
 
                 return Ok(res);
             }
@@ -33,11 +34,11 @@ namespace Product_Management.Controllers
         }
 
         [HttpGet("/GetByStore")]
-        public async Task<ActionResult> GetByStore([FromHeader] int StoreID)
+        public ActionResult GetByStore([FromHeader] int storeId)
         {
             try
             {
-                var res = await _repo.GetByStore(StoreID);
+                var res =  _service.GetByStore(storeId);
 
                 return Ok(res);
             }
@@ -48,11 +49,11 @@ namespace Product_Management.Controllers
         }
         
         [HttpPost("/AddProducts")]
-        public async Task<ActionResult> AddProducts(Product req)
+        public ActionResult AddProducts(ProductDto req)
         {
             try
             {
-                var res = await _repo.AddProducts(req);
+                var res = _service.AddProducts(req);
 
                 return Ok(res);
             }
@@ -63,11 +64,26 @@ namespace Product_Management.Controllers
         }
 
         [HttpPut("/UpdateProducts")]
-        public async Task<ActionResult> UpdateProducts(Product req)
+        public ActionResult UpdateProducts(ProductDto req)
         {
             try
             {
-                var res = await _repo.UpdateProducts(req);
+                var res = _service.UpdateProducts(req);
+
+                return Ok(res);
+            }
+            catch (Exception ex)
+            {
+                return Problem(ex.Message);
+            }
+        }
+
+        [HttpDelete("/DeleteProduct")]
+        public ActionResult DeleteProduct(DeleteProductRequest req)
+        {
+            try
+            {
+                var res = _service.DeleteProduct(req);
 
                 return Ok(res);
             }

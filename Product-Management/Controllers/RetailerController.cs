@@ -2,6 +2,8 @@
 using Product_Management.Data;
 using Product_Management.Models;
 using Product_Management.Repositories;
+using Product_Management.Services;
+using Product_Management.Services.Contracts;
 
 namespace Product_Management.Controllers
 {
@@ -10,18 +12,18 @@ namespace Product_Management.Controllers
     public class RetailerController:Controller
     {
         //private ApplicationDbContext _dbContext;
-        private IRetailersRepository _repo;
-        public RetailerController(IRetailersRepository repo)
+        private readonly IRetailerService _service;
+        public RetailerController(IRetailerService service)
         {
-            _repo = repo;
+            _service = service;
         }
 
         [HttpGet("/GetRetailers")]
-        public async Task<ActionResult> GetRetailers()
+        public ActionResult GetRetailers()
         {
             try
             {
-                var res= await _repo.GetRetailers();
+                var res= _service.GetRetailers();
                 return Ok(res);
             }
             catch (Exception ex)
@@ -31,11 +33,11 @@ namespace Product_Management.Controllers
         }
 
         [HttpPost("/AddRetailer")]
-        public async Task<ActionResult> AddRetailer(AddRetailerRequest req)
+        public ActionResult AddRetailer(RetailerDto req)
         {
             try
             {
-                var res= await _repo.AddRetailer(req);
+                var res= _service.AddRetailer(req);
                 if(!res.success)
                 {
                     return BadRequest(res);
@@ -48,15 +50,15 @@ namespace Product_Management.Controllers
                 return Problem(ex.Message);
             }
         }
-        [HttpPost("/DeleteRetailer")]
-        public async Task<ActionResult> DeleteRetailer(DeleteRetailerRequest req)
+        [HttpDelete("/DeleteRetailer")]
+        public ActionResult DeleteRetailer(DeleteRetailerRequest req)
         {
             try
             {
-                var res= await _repo.DeleteRetailer(req);
+                var res= _service.DeleteRetailer(req);
                 if(!res.success)
                 {
-                    return BadRequest(req);
+                    return BadRequest(res);
                 }
 
                 return Ok(res);

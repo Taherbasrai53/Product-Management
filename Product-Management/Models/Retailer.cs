@@ -10,8 +10,9 @@
     {
         public int RetailerId { get; set; }
     }
-    public class AddRetailerRequest
+    public class RetailerDto
     {
+        public int ID { get; set; }
         public string Name { get; set; }
     }
     public class DeleteRetailerRequest

@@ -7,8 +7,9 @@
         public string Name { get; set; }
         public string Franchisee { get; set; }
     }
-    public class AddStoreModel
+    public class StoreDto
     {
+        public int ID { get; set; }
         public int RetailerID { get; set; }
         public string Name { get; set; }
         public string Franchisee { get; set; }

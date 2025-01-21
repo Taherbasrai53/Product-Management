@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Product_Management.Models;
 using Product_Management.Repositories;
+using Product_Management.Services;
+using Product_Management.Services.Contracts;
 
 namespace Product_Management.Controllers
 {
@@ -8,18 +10,18 @@ namespace Product_Management.Controllers
     [Route("api/[Controller]")]
     public class StoreController:Controller
     {
-        private IStoresRepository _repo;
-        public StoreController(IStoresRepository repo)
+        private IStoreService _service;
+        public StoreController(IStoreService service)
         {
-            _repo = repo;
+            _service = service;
         }
 
         [HttpGet("/GetStores")]
-        public async Task<ActionResult> GetStores([FromHeader] int RetailerId)
+        public ActionResult GetStores([FromHeader] int retailerId)
         {
             try
             {
-                var res = await _repo.GetStores(RetailerId);
+                var res = _service.GetStores(retailerId);
                 return Ok(res);
             }
             catch(Exception ex)
@@ -29,11 +31,11 @@ namespace Product_Management.Controllers
         }
 
         [HttpPost("/AddStore")]
-        public async Task<ActionResult> AddStore(AddStoreModel req)
+        public ActionResult AddStore(StoreDto req)
         {
             try
             {
-                var res = await _repo.AddStore(req);
+                var res = _service.AddStore(req);
                 if(!res.success)
                 {
                     return BadRequest(res);
@@ -47,12 +49,12 @@ namespace Product_Management.Controllers
             }
         }
 
-        [HttpPost("/DeleteStore")]
-        public async Task<ActionResult> DeleteStore(DeleteStoreModel req)
+        [HttpDelete("/DeleteStore")]
+        public ActionResult DeleteStore(DeleteStoreModel req)
         {
             try
             {
-                var res = await _repo.DeleteStore(req);
+                var res = _service.DeleteStore(req);
 
                 if(!res.success)
                 {
@@ -68,11 +70,11 @@ namespace Product_Management.Controllers
         }
 
         [HttpPost("/AddRequest")]
-        public async Task<ActionResult> AddRequest(Request req)
+        public ActionResult AddRequest(RequestDto req)
         {
             try
             {
-                var res = await _repo.SendRequest(req);
+                var res = _service.SendRequest(req);
 
                 if (!res.success)
                 {

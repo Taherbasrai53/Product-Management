@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Product_Management.Data;
-using Product_Management.Repositories;
+using Product_Management.Repositories.Contracts;
+using Product_Management.Repositories.Implementations;
+using Product_Management.Services.Contracts;
+using Product_Management.Services.Implementations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,9 +19,21 @@ builder.Services.AddCors(options=>
         AllowAnyMethod());
 });
 
+//Entity Framework implementation
+
 builder.Services.AddTransient<IRetailersRepository, RetailersRepository>();
 builder.Services.AddTransient<IStoresRepository, StoresRepository>();
 builder.Services.AddTransient<IProductsRepository, ProductsRepository>();
+
+//ADO.Net implementation
+
+//builder.Services.AddTransient<IRetailersRepository, RetailersADORepository>();
+//builder.Services.AddTransient<IStoresRepository, StoresADORepository>();
+//builder.Services.AddTransient<IProductsRepository, ProductsADORepository>();
+
+builder.Services.AddTransient<IRetailerService, RetailerService>();
+builder.Services.AddTransient<IStoreService, StoreService>();
+builder.Services.AddTransient<IProductService, ProductService>();
 
 builder.Services.AddControllers();
 
@@ -36,6 +51,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors();
 
 app.UseAuthorization();
 
