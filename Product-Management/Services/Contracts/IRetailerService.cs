@@ -6,6 +6,6 @@ namespace Product_Management.Services.Contracts
     {
         public List<RetailerDto> GetRetailers();
         public Response AddRetailer(RetailerDto item);
-        public Response DeleteRetailer(DeleteRetailerRequest item);
+        public Response DeleteRetailer(int id);
     }
 }

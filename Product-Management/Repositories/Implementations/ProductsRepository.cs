@@ -88,14 +88,7 @@ namespace Product_Management.Repositories.Implementations
         public Response AddProducts(ProductDto req)
         {
             try
-            {
-
-                var existingProduct = _dbContext.Products.Where(r => r.StoreId == req.StoreId && r.Name == req.Name).FirstOrDefault();
-
-                if (existingProduct != null)
-                {
-                    return new Response(false, "Product already exists");
-                }
+            {                
 
                 var product = new Product
                 {
@@ -119,22 +112,12 @@ namespace Product_Management.Repositories.Implementations
         public Response UpdateProducts(ProductDto req)
         {
             try
-            {
-                var existingProduct = _dbContext.Products.Where(r => r.ID != req.ID && r.StoreId == req.StoreId && r.Name == req.Name).FirstOrDefault();
-
-                if (existingProduct != null)
-                {
-                    return new Response(false, "Product already exists");
-                }
+            {                
 
                 var productToUpdate = _dbContext.Products
                                     .Where(p => p.ID == req.ID && p.StoreId == req.StoreId)
                                     .FirstOrDefault();
-
-                if (productToUpdate == null)
-                {
-                    return new Response(false, "Product doesnt exist");
-                }
+                
 
                 productToUpdate.Name = req.Name;
                 productToUpdate.Quantity = req.Quantity;
@@ -150,15 +133,12 @@ namespace Product_Management.Repositories.Implementations
             }
         }
 
-        public Response DeleteProduct(DeleteProductRequest req)  //read more about tasks 
+        public Response DeleteProduct(int id, int storeID)  //read more about tasks 
         {
             try
             {
-                var existingRetailer = _dbContext.Products.Where(r => r.ID == req.ID && r.StoreId == req.StoreId).FirstOrDefault();
-                if (existingRetailer == null)
-                {
-                    return new Response(false, "Product Doesnt Exist");
-                }
+                var existingRetailer = _dbContext.Products.Where(r => r.ID == id && r.StoreId == storeID).FirstOrDefault();
+                
 
                 _dbContext.Products.Remove(existingRetailer);
                 _dbContext.SaveChanges(); //async and await.. moment the main tread hits here.. the main thread would go back and the reamining execution might be done by a different thread
@@ -169,6 +149,40 @@ namespace Product_Management.Repositories.Implementations
             {
                 throw;
             }
+        }
+
+        public Boolean CheckIfExists(int ID, string Name, int StoreID, int flag)
+        {
+            if (flag == 1)
+            {
+                // update check
+                var existingProduct = _dbContext.Products.Where(r => r.ID != ID && r.StoreId == StoreID && r.Name == Name).FirstOrDefault();
+                if (existingProduct != null)
+                {
+                    return true;
+                }
+            }
+            else if (flag == 2)
+            {
+                // delete check
+                var existingRetailer = _dbContext.Products.Where(r => r.ID == ID && r.StoreId == StoreID).FirstOrDefault();
+                if (existingRetailer == null)
+                {
+                    return true;
+                }
+            }
+            else if (flag == 3)
+            {
+                //add check
+                var existingProduct = _dbContext.Products.Where(r => r.StoreId == StoreID && r.Name == Name).FirstOrDefault();
+
+                if (existingProduct != null)
+                {
+                    return true;
+                }
+            }
+            
+            return false;
         }
     }
 
@@ -190,25 +204,7 @@ namespace Product_Management.Repositories.Implementations
                 SqlCommand sqlComm = sqlConn.CreateCommand();
 
                 sqlComm.CommandType = System.Data.CommandType.Text;
-                sqlComm.CommandText = @"
-if not exists(Select * from Stores where Id=@StoreId)
-	begin
-		select -1 as ReturnValue;
-        return;
-	end
-
-	if(@Name is null or @Name='')
-	begin
-		select -2 as ReturnValue;
-        return;
-	end
-
-	if exists(select * from Products where Name=@Name and StoreId=@StoreId)
-	begin
-		select -3 as ReturnValue;
-        return;
-	end
-
+                sqlComm.CommandText = @"	
 	Insert into Products (Name, Price, Quantity, StoreId, Performance) values(@Name, @Price, @Quantity, @StoreId, 1);
         select 0 as ReturnValue;
         return;
@@ -264,7 +260,7 @@ if not exists(Select * from Stores where Id=@StoreId)
             }
         }
 
-        public Response DeleteProduct(DeleteProductRequest req)
+        public Response DeleteProduct(int id, int storeID)
         {
             SqlConnection sqlConn = null;
             try
@@ -276,11 +272,7 @@ if not exists(Select * from Stores where Id=@StoreId)
 
                 sqlComm.CommandType = System.Data.CommandType.Text;
                 sqlComm.CommandText = @"
-if not exists(Select * from Products where StoreId=@StoreId and ID=@ID)
-	begin
-		select -1 as ReturnValue;
-        return;
-	end
+
 
 Delete from Products where ID=@ID;
 
@@ -288,8 +280,8 @@ Delete from Products where ID=@ID;
     return;
 ";
 
-                sqlComm.Parameters.AddWithValue("@ID", req.ID);
-                sqlComm.Parameters.AddWithValue("@StoreId", req.StoreId);
+                sqlComm.Parameters.AddWithValue("@ID", id);
+                sqlComm.Parameters.AddWithValue("@StoreId", storeID);
 
                 SqlParameter returnParameter = new SqlParameter();
                 returnParameter.Direction = System.Data.ParameterDirection.ReturnValue;
@@ -451,19 +443,6 @@ Select * from Products
 
                 sqlComm.CommandType = System.Data.CommandType.Text;
                 sqlComm.CommandText = @"
-if(@Name is null or @Name='')
-	begin
-		select -1 as ReturnValue;
-        return;
-	end
-
-	if exists(select * from Products where ID<>@ID and Name=@Name and StoreId=@StoreId)
-	begin
-		select -2 as ReturnValue;
-        return;
-	end
-	
-
 	Update Products set Name=@Name, Quantity=@Quantity, Price=@Price, Performance=@Performance where ID=@ID and StoreId=@StoreId
 
 	select 0 as ReturnValue;
@@ -512,6 +491,91 @@ if(@Name is null or @Name='')
                 {
                     try
                     { sqlConn.Close(); }
+                    catch { }
+                }
+            }
+        }
+
+        public Boolean CheckIfExists(int ID, string Name, int StoreID, int flag)
+        {
+            SqlConnection sqlConn = null;
+            try
+            {
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                sqlConn = new SqlConnection(connectionString);
+                sqlConn.Open();
+                SqlCommand sqlComm = sqlConn.CreateCommand();
+
+                sqlComm.CommandType = System.Data.CommandType.Text;
+
+                sqlComm.CommandText = @"
+                if @Flag=1
+                begin
+                    -- for update check
+                    if exists(select * from Products where ID<>@ID and Name=@Name and StoreId=@StoreId)
+	                begin
+		                select -1 as ReturnValue;
+                        return;
+	                end
+                end
+                else if @Flag=2
+                begin
+                    -- for delete check
+                    if not exists(Select * from Products where StoreId=@StoreId and ID=@ID)
+	                begin
+		                select -1 as ReturnValue;
+                        return;
+	                end
+                end
+                else if @Flag=3 
+                begin
+                   
+                     -- for add check
+                    if exists(select * from Products where Name=@Name and StoreId=@StoreId)
+	                begin
+		                select -1 as ReturnValue;
+                        return;
+	                end
+                end
+                
+
+                select 0 as ReturnValue;
+                return;
+                ";
+
+                sqlComm.Parameters.AddWithValue("@StoreID", StoreID);
+                sqlComm.Parameters.AddWithValue("@ID", ID);
+                sqlComm.Parameters.AddWithValue("@Name", Name);
+                sqlComm.Parameters.AddWithValue("@Flag", flag);
+
+                SqlParameter returnParameter = new SqlParameter();
+                returnParameter.Direction = System.Data.ParameterDirection.ReturnValue;
+                sqlComm.Parameters.Add(returnParameter);
+
+                SqlDataReader reader = sqlComm.ExecuteReader();
+                if (reader.Read())
+                {
+                    int returnValue = reader.GetInt32(reader.GetOrdinal("ReturnValue"));
+
+                    if (returnValue == -1)
+                    {
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                return false;
+            }
+            catch { throw; }
+            finally
+            {
+                if (sqlConn != null)
+                {
+                    try
+                    {
+                        sqlConn.Close();
+                    }
                     catch { }
                 }
             }

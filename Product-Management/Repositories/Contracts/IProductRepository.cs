@@ -6,8 +6,9 @@ namespace Product_Management.Repositories.Contracts
     {
         public List<ProductDto> SearchProducts(int storeId, string query);
         public List<ProductDto> GetByStore(int storeId);
-        public Response DeleteProduct(DeleteProductRequest req);
+        public Response DeleteProduct(int id, int storeID);
         public Response AddProducts(ProductDto req);
         public Response UpdateProducts(ProductDto req);
+        public Boolean CheckIfExists(int ID, string Name, int StoreID, int flag);
     }
 }

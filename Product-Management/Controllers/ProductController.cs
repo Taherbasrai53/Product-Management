@@ -79,11 +79,11 @@ namespace Product_Management.Controllers
         }
 
         [HttpDelete("/DeleteProduct")]
-        public ActionResult DeleteProduct(DeleteProductRequest req)
+        public ActionResult DeleteProduct([FromHeader] int id, [FromHeader] int storeId)
         {
             try
             {
-                var res = _service.DeleteProduct(req);
+                var res = _service.DeleteProduct(id, storeId);
 
                 return Ok(res);
             }

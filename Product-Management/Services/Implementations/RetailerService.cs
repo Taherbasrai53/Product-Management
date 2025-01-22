@@ -9,10 +9,14 @@ namespace Product_Management.Services.Implementations
 
     public class RetailerService : IRetailerService
     {
-        IRetailersRepository _repo;
+        private readonly IRetailersRepository _repo;
+        private HashSet<int> Ids;
+        private HashSet<string> Names;
         public RetailerService(IRetailersRepository repo)
         {
             _repo = repo;
+            Ids = new HashSet<int>();
+            Names = new HashSet<string>();
         }
 
         public Response AddRetailer(RetailerDto req)
@@ -25,17 +29,24 @@ namespace Product_Management.Services.Implementations
             {
                 return new Response(false, "please enter a valid name");
             }
-            //var retailer = new Retailer
-            //{
-            //    Name = req.Name,
-
-            //};
+            var checkRetailer = _repo.CheckIfExists(0, req.Name, 1);
+            if(checkRetailer)
+            {
+                return new Response(false, "The retailer already exists");
+            }
+            
             return _repo.AddRetailer(req);
         }
 
-        public Response DeleteRetailer(DeleteRetailerRequest item)
+        public Response DeleteRetailer(int id)
         {
-            return _repo.DeleteRetailer(item);
+            var checkRetailer = _repo.CheckIfExists(id, "", 2);
+            if (checkRetailer)
+            {
+                return new Response(false, "The retailer doesnt exist");
+            }
+
+            return _repo.DeleteRetailer(id);
         }
 
         public List<RetailerDto> GetRetailers()

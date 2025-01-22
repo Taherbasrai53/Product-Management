@@ -50,11 +50,11 @@ namespace Product_Management.Controllers
         }
 
         [HttpDelete("/DeleteStore")]
-        public ActionResult DeleteStore(DeleteStoreModel req)
+        public ActionResult DeleteStore([FromHeader] int id)
         {
             try
             {
-                var res = _service.DeleteStore(req);
+                var res = _service.DeleteStore(id);
 
                 if(!res.success)
                 {

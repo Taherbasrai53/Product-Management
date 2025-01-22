@@ -9,7 +9,7 @@ using static Product_Management.Models.Product;
 using static Product_Management.Models.Request;
 
 
-namespace Product_Management.Repositories.Implementations
+namespace Product_Management.Repositories
 {
     public class StoresRepository : IStoresRepository
     {
@@ -49,14 +49,43 @@ namespace Product_Management.Repositories.Implementations
             }
         }
 
+        public Boolean CheckIfExists(int ID, string Name, int RetailerID, int flag)
+        {
+            if (flag == 1)
+            {
+                //add validation
+                var existingStore = _dbContext.Stores.Where(r => r.Name == Name && r.RetailerID == RetailerID).FirstOrDefault();
+
+                if (existingStore != null)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            else if (flag == 2)
+            {
+                //delete validation
+                var existingStore = _dbContext.Stores.Where(r => r.ID == ID).FirstOrDefault();
+                if (existingStore == null)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            
+            return false;
+        }
+
         public Response AddStore(StoreDto req)
         {
-            var existingStore = _dbContext.Stores.Where(r => r.Name == req.Name && r.RetailerID == req.RetailerID).FirstOrDefault();
+            //var existingStore = _dbContext.Stores.Where(r => r.Name == req.Name && r.RetailerID==req.RetailerID).FirstOrDefault();
 
-            if (existingStore != null)
-            {
-                return new Response(false, "Store already exists");
-            }
+            //if (existingStore != null)
+            //{
+            //    return new Response(false, "Store already exists");
+            //}
 
             var store = new Store
             {
@@ -70,15 +99,15 @@ namespace Product_Management.Repositories.Implementations
             return new Response(true, "Store added successfully");
         }
 
-        public Response DeleteStore(DeleteStoreModel req)
+        public Response DeleteStore(int id)
         {
             try
             {
-                var existingStore = _dbContext.Stores.Where(r => r.ID == req.ID).FirstOrDefault();
-                if (existingStore == null)
-                {
-                    return new Response(false, "Retailer Doesnt Exist");
-                }
+                var existingStore = _dbContext.Stores.Where(r => r.ID == id).FirstOrDefault();
+                //if (existingStore == null)
+                //{
+                //    return new Response(false, "Retailer Doesnt Exist");
+                //}
 
                 _dbContext.Stores.Remove(existingStore);
                 _dbContext.SaveChanges();
@@ -96,17 +125,17 @@ namespace Product_Management.Repositories.Implementations
             try
             {
                 int retailerId = 0;
-                var existingProduct = _dbContext.Products.Where(p => p.ID == req.ProductID).FirstOrDefault();
-                if (existingProduct == null)
-                {
-                    return new Response(false, "Product Doesnt Exist");
-                }
+                //var existingProduct= _dbContext.Products.Where(p=> p.ID==req.ProductID).FirstOrDefault();
+                //if(existingProduct == null)
+                //{
+                //    return new Response(false, "Product Doesnt Exist");
+                //}
 
                 var existingStore = _dbContext.Stores.Where(r => r.ID == req.StoreID).FirstOrDefault();
-                if (existingStore == null)
-                {
-                    return new Response(false, "Store Doesnt Exist");
-                }
+                //if (existingstore == null)
+                //{
+                //    return new response(false, "store doesnt exist");
+                //}
 
                 retailerId = existingStore.RetailerID;
 
@@ -151,18 +180,7 @@ namespace Product_Management.Repositories.Implementations
                 SqlCommand sqlComm = sqlConn.CreateCommand();
 
                 sqlComm.CommandType = System.Data.CommandType.Text;
-                sqlComm.CommandText = @"
-if(not exists(Select * from [ProductManagemnt].[dbo].Retailers where ID=@RetailerId))
-	begin
-		select -1 as ReturnValue;
-        return;
-	end
-
-	if(exists(Select * from [ProductManagemnt].[dbo].Stores where Name= @Name and RetailerID=@RetailerId))
-	begin
-		select -2 as ReturnValue;
-        return;
-	end
+                sqlComm.CommandText = @"	
 
 	INSERT INTO [ProductManagemnt].[dbo].Stores (RetailerID, Name, Franchisee) VALUES (@RetailerId, @Name, @Franchisee)
 
@@ -214,7 +232,7 @@ if(not exists(Select * from [ProductManagemnt].[dbo].Retailers where ID=@Retaile
             }
         }
 
-        public Response DeleteStore(DeleteStoreModel req)
+        public Response DeleteStore(int id)
         {
             SqlConnection sqlConn = null;
             try
@@ -226,18 +244,14 @@ if(not exists(Select * from [ProductManagemnt].[dbo].Retailers where ID=@Retaile
 
                 sqlComm.CommandType = System.Data.CommandType.Text;
                 sqlComm.CommandText = @"
-if(exists(Select * from [ProductManagemnt].[dbo].Stores where ID=@ID))
-	begin
-		select -1 as ReturnValue;
-        return;
-	end
+
 
 Delete from [ProductManagemnt].[dbo].Stores were ID=@ID;
 select 0 as ReturnValue;
         return;
 ";
 
-                sqlComm.Parameters.AddWithValue("@ID", req.ID);
+                sqlComm.Parameters.AddWithValue("@ID", id);
 
                 SqlParameter returnParameter = new SqlParameter();
                 returnParameter.Direction = System.Data.ParameterDirection.ReturnValue;
@@ -341,17 +355,6 @@ where RetailerID=@RetailerId
                 sqlComm.CommandText = @"
 declare @RetailerID int;
 
-	if not exists (Select * from [ProductManagemnt].[dbo].Products where ID=@ProductID)
-	begin
-		select -1 as ReturnValue;
-    return;
-	end
-
-	if not exists (Select * from [ProductManagemnt].[dbo].Stores where ID=@StoreID)
-	begin
-		select -2 as ReturnValue;
-    return;
-	end
 
 	select @RetailerID=RetailerID from [ProductManagemnt].[dbo].Stores where ID=@StoreID
 
@@ -405,5 +408,80 @@ declare @RetailerID int;
                 }
             }
         }
+
+        public Boolean CheckIfExists(int ID, string Name, int RetailerID, int flag)
+        {
+            SqlConnection sqlConn = null;
+            try
+            {
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                sqlConn = new SqlConnection(connectionString);
+                sqlConn.Open();
+                SqlCommand sqlComm = sqlConn.CreateCommand();
+
+                sqlComm.CommandType = System.Data.CommandType.Text;
+
+                sqlComm.CommandText = @"
+                if @Flag=1
+                begin
+                    if(exists(Select * from [ProductManagemnt].[dbo].Stores where Name= @Name and RetailerID=@RetailerId))
+	                begin
+		                select -1 as ReturnValue;
+                        return;
+	                end
+                end
+                else if @Flag=2
+                begin
+                    if not exists (Select * from [ProductManagemnt].[dbo].Stores where ID=@StoreID)
+	                begin
+		                select -1 as ReturnValue;
+                        return;
+	                end
+                end
+
+                select 0 as ReturnValue;
+                return;
+                ";
+
+                sqlComm.Parameters.AddWithValue("@StoreID", ID);
+                sqlComm.Parameters.AddWithValue("@RetailerID", RetailerID);
+                sqlComm.Parameters.AddWithValue("@Name", Name);
+                sqlComm.Parameters.AddWithValue("@Flag", flag);
+
+                SqlParameter returnParameter = new SqlParameter();
+                returnParameter.Direction = System.Data.ParameterDirection.ReturnValue;
+                sqlComm.Parameters.Add(returnParameter);
+
+                SqlDataReader reader = sqlComm.ExecuteReader();
+                if (reader.Read())
+                {
+                    int returnValue = reader.GetInt32(reader.GetOrdinal("ReturnValue"));
+
+                    if (returnValue == -1)
+                    {
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                return false;
+            }
+            catch { throw; }
+            finally
+            {
+                if (sqlConn != null)
+                {
+                    try
+                    {
+                        sqlConn.Close();
+                    }
+                    catch { }
+                }
+            }
+        }
+
+
+        
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Product_Management.Data;
+using Product_Management.Repositories;
 using Product_Management.Repositories.Contracts;
 using Product_Management.Repositories.Implementations;
 using Product_Management.Services.Contracts;

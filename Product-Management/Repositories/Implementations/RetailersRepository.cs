@@ -41,14 +41,6 @@ namespace Product_Management.Repositories.Implementations
             try
             {
 
-
-                var existingRetailer = _dbContext.Retailers.Where(r => r.Name == req.Name).FirstOrDefault();
-
-                if (existingRetailer != null)
-                {
-                    return new Response(false, "Retailer already exists");
-                }
-
                 var retailer = new Retailer
                 {
                     Name = req.Name,
@@ -64,15 +56,12 @@ namespace Product_Management.Repositories.Implementations
             }
         }
 
-        public Response DeleteRetailer(DeleteRetailerRequest req)
+        public Response DeleteRetailer(int id)
         {
             try
             {
-                var existingRetailer = _dbContext.Retailers.Where(r => r.ID == req.Id).FirstOrDefault();
-                if (existingRetailer == null)
-                {
-                    return new Response(false, "Retailer Doesnt Exist");
-                }
+                var existingRetailer = _dbContext.Retailers.Where(r => r.ID == id).FirstOrDefault();
+                
 
                 _dbContext.Retailers.Remove(existingRetailer);
                 _dbContext.SaveChanges();
@@ -83,6 +72,31 @@ namespace Product_Management.Repositories.Implementations
             {
                 throw;
             }
+        }
+
+        public Boolean CheckIfExists(int ID, string Name, int flag)
+        {
+            if (flag == 1)
+            {
+                // add check
+                var existingRetailer = _dbContext.Retailers.Where(r => r.Name == Name).FirstOrDefault();
+
+                if (existingRetailer != null)
+                {
+                    return true;
+                }
+            }
+            else if (flag == 2)
+            {
+                // delete check
+                var existingRetailer = _dbContext.Retailers.Where(r => r.ID == ID).FirstOrDefault();
+                if (existingRetailer == null)
+                {
+                    return true;
+                }
+            }            
+
+            return false;
         }
     }
 
@@ -105,11 +119,7 @@ namespace Product_Management.Repositories.Implementations
 
                 sqlComm.CommandType = System.Data.CommandType.Text;
                 sqlComm.CommandText = @"
-                    if exists(select * from [ProductManagemnt].[dbo].Retailers where Name=@Name)
-                    begin
-                        select -1 as ReturnValue;
-                        return;
-                    end
+                    
 
                     Insert into [ProductManagemnt].[dbo].Retailers (Name) values(@Name)
                     select 0 as ReturnValue;
@@ -133,7 +143,7 @@ namespace Product_Management.Repositories.Implementations
                         return new Response(false, "Retailer already exists");
                     }
 
-                    return new Response(true, "Retailer deleted successfully");
+                    return new Response(true, "Retailer added successfully");
                 }
 
                 return new Response(false, "Unexpected error occurred");
@@ -155,7 +165,7 @@ namespace Product_Management.Repositories.Implementations
             }
         }
 
-        public Response DeleteRetailer(DeleteRetailerRequest req)
+        public Response DeleteRetailer(int id)
         {
             SqlConnection sqlConn = null;
             try
@@ -167,18 +177,14 @@ namespace Product_Management.Repositories.Implementations
 
                 sqlComm.CommandType = System.Data.CommandType.Text;
                 sqlComm.CommandText = @"
-    if not exists(select * from [ProductManagemnt].[dbo].Retailers where ID=@Id)
-    begin
-        select -1 as ReturnValue;
-        return;
-    end
+    
 
     Delete from [ProductManagemnt].[dbo].Retailers where ID=@Id;
 
     select 0 as ReturnValue;
     ";
 
-                sqlComm.Parameters.AddWithValue("@Id", req.Id);
+                sqlComm.Parameters.AddWithValue("@Id", id);
 
                 SqlDataReader reader = sqlComm.ExecuteReader();
                 if (reader.Read())
@@ -251,6 +257,77 @@ Select * from [ProductManagemnt].[dbo].Retailers
             {
                 throw;
             }
+            finally
+            {
+                if (sqlConn != null)
+                {
+                    try
+                    {
+                        sqlConn.Close();
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        public Boolean CheckIfExists(int ID, string Name, int flag)
+        {
+            SqlConnection sqlConn = null;
+            try
+            {
+                string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                sqlConn = new SqlConnection(connectionString);
+                sqlConn.Open();
+                SqlCommand sqlComm = sqlConn.CreateCommand();
+
+                sqlComm.CommandType = System.Data.CommandType.Text;
+
+                sqlComm.CommandText = @"
+                if @Flag=1
+                begin
+                    if exists(select * from [ProductManagemnt].[dbo].Retailers where Name=@Name)
+                    begin
+                        select -1 as ReturnValue;
+                        return;
+                    end
+                end
+                else if @Flag=2
+                begin
+                    if not exists(select * from [ProductManagemnt].[dbo].Retailers where ID=@Id)
+                    begin
+                        select -1 as ReturnValue;
+                        return;
+                    end
+                end
+
+                select 0 as ReturnValue;
+                return;
+                ";
+
+                sqlComm.Parameters.AddWithValue("@StoreID", ID);                
+                sqlComm.Parameters.AddWithValue("@Name", Name);
+                sqlComm.Parameters.AddWithValue("@Flag", flag);
+
+                SqlParameter returnParameter = new SqlParameter();
+                returnParameter.Direction = System.Data.ParameterDirection.ReturnValue;
+                sqlComm.Parameters.Add(returnParameter);
+
+                SqlDataReader reader = sqlComm.ExecuteReader();
+                if (reader.Read())
+                {
+                    int returnValue = reader.GetInt32(reader.GetOrdinal("ReturnValue"));
+
+                    if (returnValue == -1)
+                    {
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                return false;
+            }
+            catch { throw; }
             finally
             {
                 if (sqlConn != null)

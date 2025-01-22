@@ -51,11 +51,11 @@ namespace Product_Management.Controllers
             }
         }
         [HttpDelete("/DeleteRetailer")]
-        public ActionResult DeleteRetailer(DeleteRetailerRequest req)
+        public ActionResult DeleteRetailer(int id)
         {
             try
             {
-                var res= _service.DeleteRetailer(req);
+                var res= _service.DeleteRetailer(id);
                 if(!res.success)
                 {
                     return BadRequest(res);

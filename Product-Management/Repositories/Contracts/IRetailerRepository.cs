@@ -6,6 +6,7 @@ namespace Product_Management.Repositories.Contracts
     {
         public List<RetailerDto> GetRetailers();
         public Response AddRetailer(RetailerDto item);
-        public Response DeleteRetailer(DeleteRetailerRequest item);
+        public Response DeleteRetailer(int id);
+        public Boolean CheckIfExists(int ID, string Name, int flag);
     }
 }
